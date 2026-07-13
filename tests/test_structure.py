@@ -1,6 +1,9 @@
 from io import BytesIO
 
+import mcstructure as mcstructure_module
 from mcstructure import Block, Structure, STRUCTURE_MAX_SIZE, has_suitable_size, nbtx
+from mcstructure._fast_nbt import read_structure_size
+import numpy as np
 import pytest
 
 
@@ -86,6 +89,20 @@ def test_fast_dump_matches_reference_encoder() -> None:
     assert actual.getvalue() == expected.getvalue()
 
 
+def test_read_structure_size_without_decoding_blocks() -> None:
+    struct = Structure((2, 3, 4), fill=Block("minecraft:stone"))
+    output = BytesIO()
+    struct.dump(output)
+    output.seek(0)
+
+    assert read_structure_size(output) == (2, 3, 4)
+
+
+def test_read_structure_size_rejects_truncated_header() -> None:
+    with pytest.raises(ValueError, match="truncated"):
+        read_structure_size(BytesIO(b"\x0a\x00"))
+
+
 def test_dump_falls_back_for_entities() -> None:
     struct = Structure((1, 1, 1), fill=Block("minecraft:air"))
     struct.add_entity(nbtx.TagCompound("", []))
@@ -96,3 +113,70 @@ def test_dump_falls_back_for_entities() -> None:
     struct.dump(actual)
 
     assert actual.getvalue() == expected.getvalue()
+
+
+def test_load_with_entities_uses_compatible_fallback() -> None:
+    struct = Structure((1, 1, 1), fill=Block("minecraft:air"))
+    struct.add_entity(nbtx.TagCompound("", []))
+    output = BytesIO()
+    struct.dump(output)
+    output.seek(0)
+
+    loaded = Structure.load(output)
+
+    assert loaded.size == struct.size
+    assert len(loaded.entities) == 1
+
+
+def test_native_load_matches_python_decoder() -> None:
+    if mcstructure_module._native_load_simple_structure is None:
+        pytest.skip("optional Rust decoder is not installed")
+    struct = Structure((4, 3, 2), fill=Block("minecraft:stone"))
+    struct.set_block(
+        (3, 2, 1),
+        Block("minecraft:oak_stairs", upside_down_bit=0, weirdo_direction=2),
+    )
+    output = BytesIO()
+    struct.dump(output)
+    data = output.getvalue()
+
+    native = Structure.load(BytesIO(data))
+    python = Structure._load_with_nbtx(BytesIO(data))
+
+    assert native.size == python.size
+    assert native.palette == python.palette
+    np.testing.assert_array_equal(native.structure, python.structure)
+
+
+def test_load_preserves_waterlogged_palette_entries() -> None:
+    stone = Block("minecraft:stone")
+    stairs = Block(
+        "minecraft:oak_stairs",
+        waterlogged=True,
+        upside_down_bit=0,
+        weirdo_direction=2,
+    )
+    struct = Structure((2, 1, 1), fill=stone)
+    struct.set_block((1, 0, 0), stairs)
+    output = BytesIO()
+    struct.dump(output)
+    output.seek(0)
+
+    loaded = Structure.load(output)
+
+    assert loaded.get_block((1, 0, 0)) == stairs
+
+
+def test_load_with_block_entity_data_uses_compatible_fallback() -> None:
+    chest = Block(
+        "minecraft:chest",
+        block_entity_data=[nbtx.TagString("id", "Chest")],
+    )
+    struct = Structure((1, 1, 1), fill=chest)
+    output = BytesIO()
+    struct.dump(output)
+    output.seek(0)
+
+    loaded = Structure.load(output)
+
+    assert loaded.get_block((0, 0, 0)) == chest

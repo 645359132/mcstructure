@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from functools import lru_cache
-from struct import pack
+from struct import pack, unpack
 from typing import BinaryIO, Protocol
 
 import numpy as np
@@ -62,6 +62,60 @@ class Writer:
         self.int(len(values))
         for value in values:
             self.int(value)
+
+
+def _read_exact(stream: BinaryIO, size: int) -> bytes:
+    data = stream.read(size)
+    if len(data) != size:
+        raise ValueError("truncated mcstructure NBT header")
+    return data
+
+
+def _read_string(stream: BinaryIO) -> str:
+    (length,) = unpack("<h", _read_exact(stream, 2))
+    if length < 0:
+        raise ValueError("negative string length in mcstructure NBT header")
+    try:
+        return _read_exact(stream, length).decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ValueError("invalid UTF-8 in mcstructure NBT header") from error
+
+
+def _read_named_tag(stream: BinaryIO) -> tuple[int, str]:
+    tag_id = _read_exact(stream, 1)[0]
+    return tag_id, _read_string(stream)
+
+
+def read_structure_size(stream: BinaryIO) -> tuple[int, int, int]:
+    """Read the fixed mcstructure header without decoding its block arrays.
+
+    Structures emitted by :class:`Structure` begin with a root compound,
+    ``format_version``, then the three-element ``size`` list. Validating that
+    header is sufficient when auditing files that the exporter just wrote.
+    """
+    root_tag = _read_exact(stream, 1)[0]
+    if root_tag != TAG_COMPOUND:
+        raise ValueError("mcstructure root must be an NBT compound")
+    _read_string(stream)
+
+    version_tag, version_name = _read_named_tag(stream)
+    if version_tag != TAG_INT or version_name != "format_version":
+        raise ValueError("mcstructure header is missing format_version")
+    (format_version,) = unpack("<i", _read_exact(stream, 4))
+    if format_version != 1:
+        raise ValueError(f"unsupported mcstructure format_version: {format_version}")
+
+    size_tag, size_name = _read_named_tag(stream)
+    if size_tag != TAG_LIST or size_name != "size":
+        raise ValueError("mcstructure header is missing size")
+    child_tag = _read_exact(stream, 1)[0]
+    (length,) = unpack("<i", _read_exact(stream, 4))
+    if child_tag != TAG_INT or length != 3:
+        raise ValueError("mcstructure size must contain three integers")
+    size = unpack("<iii", _read_exact(stream, 12))
+    if any(dimension <= 0 for dimension in size):
+        raise ValueError(f"invalid mcstructure size: {size}")
+    return size
 
 
 @lru_cache(maxsize=4)

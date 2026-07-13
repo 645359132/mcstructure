@@ -76,4 +76,4 @@ def build_structure() -> Structure:
 - `place_with_modsdk.py`
 - `placements.json` 与 `project_manifest.json`
 
-校验覆盖源码语法、规格字段、builder 类型和尺寸、所有 JSON、切片边界/体积、结构文件回读、清单计数及必要引用文件。
+`build` 根据刚生成的内存数据校验规格、builder、尺寸、切片边界/体积、文件存在性、清单计数和引用，不立即重开数千个新文件。独立 `validate` 还会重新解析所有 JSON 并读取每片结构的固定 NBT 头，但不完整解码方块数组；完整 NBT 编解码正确性由小型 round-trip 测试覆盖。

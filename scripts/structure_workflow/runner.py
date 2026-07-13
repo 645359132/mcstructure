@@ -11,6 +11,7 @@ import sys
 from typing import Callable
 
 from mcstructure import Structure
+from mcstructure._fast_nbt import read_structure_size
 
 from .exporter import ExportMode, ExportReport, export_project
 from .model import ProjectSpec
@@ -83,8 +84,8 @@ def _load_json(path: Path) -> object:
         raise ValueError(f"invalid generated JSON {path}: {error}") from error
 
 
-def validate_output(work_dir: Path, spec: ProjectSpec) -> int:
-    """Audit JSON, piece sizes, placement bounds, and generated references."""
+def validate_output(work_dir: Path, spec: ProjectSpec, *, deep: bool = True) -> int:
+    """Audit generated output, optionally reopening every file for deep checks."""
     output_dir = work_dir / "out"
     manifest_path = output_dir / "project_manifest.json"
     placements_path = output_dir / "placements.json"
@@ -92,8 +93,9 @@ def validate_output(work_dir: Path, spec: ProjectSpec) -> int:
         raise ValueError("output is incomplete; run the build command first")
 
     json_paths = sorted(output_dir.rglob("*.json"))
-    for path in json_paths:
-        _load_json(path)
+    if deep:
+        for path in json_paths:
+            _load_json(path)
     manifest = _load_json(manifest_path)
     placements_root = _load_json(placements_path)
     if not isinstance(manifest, dict) or not isinstance(placements_root, dict):
@@ -133,12 +135,14 @@ def validate_output(work_dir: Path, spec: ProjectSpec) -> int:
             path = output_dir / "structures" / str(namespace) / f"{name}.mcstructure"
             if not path.is_file():
                 raise ValueError(f"missing structure file: {path}")
-            with path.open("rb") as file:
-                loaded = Structure.load(file)
-            if loaded.size != size:
-                raise ValueError(
-                    f"piece {identifier} has size {loaded.size}, manifest says {size}"
-                )
+            if deep:
+                with path.open("rb") as file:
+                    actual_size = read_structure_size(file)
+                if actual_size != size:
+                    raise ValueError(
+                        f"piece {identifier} has size {actual_size}, "
+                        f"manifest says {size}"
+                    )
             validated_structures += 1
 
         expected_count = manifest.get(f"{mode}_pieces")
@@ -223,7 +227,7 @@ def build_work(work_dir: Path, *, mode: ExportMode = "all") -> BuildResult:
     spec = ProjectSpec.load(work_dir)
     structure = build_structure(work_dir, spec)
     report = export_project(structure, spec, work_dir / "out", mode=mode)
-    validated_files = validate_output(work_dir, spec)
+    validated_files = validate_output(work_dir, spec, deep=False)
     return BuildResult(spec, report, validated_files)
 
 

@@ -38,6 +38,6 @@ description: Builds a complete AI-authored Minecraft Bedrock structure work whos
 ## 完成标准
 
 - `main.py` 可独立执行，仓库级 `build` 命令也可执行。
-- 一次构建自动生成 worldgen 与 ModSDK 输出，并通过回读审计。
+- 一次构建自动生成 worldgen 与 ModSDK 输出并通过快速审计；独立 `validate` 可复查全部 JSON、引用和结构 NBT 头。
 - 建筑具有清晰轮廓、入口、连续路线、可进入内部、照明和区域差异。
 - 最终回复列出修改的源码、构建结果、切片数、维度 ID 和推荐传送命令。

@@ -48,6 +48,20 @@ _此库中的所有特性也是仅仅针对基岩版的。_
 pip install mcstructure
 ```
 
+### Rust 原生读取加速
+
+`Structure.load()` 会自动使用可选的 Rust NBT 解码器。对于无实体、无方块实体/计划刻等位置元数据的常见结构，它直接把方块索引解码为紧凑字节并交给 NumPy，避免为每个索引创建 Python 标签对象；复杂结构自动回退到完整 Python 解码器，调用方式不变。
+
+可以检查当前安装是否包含原生解码器：
+
+```python
+from mcstructure import NATIVE_DECODER_AVAILABLE
+
+print(NATIVE_DECODER_AVAILABLE)
+```
+
+从源码安装时需要 Rust 工具链和 `setuptools-rust`；Rust 扩展被声明为可选构建，无法编译时仍可安装纯 Python 回退版本。发布时应为支持的平台构建带原生扩展的 wheel，避免最终用户本地编译。
+
 
 基本用法
 -----------
@@ -134,13 +148,15 @@ python workset/my_palace/main.py
 * 将完整逻辑画布切成体积不超过 65,536 方块的 `.mcstructure`。
 * 生成大型建筑所需的 `netease_features`、`netease_feature_rules`、`netease_biomes` 和自定义维度 JSON；继承的原版群系由 `project.json` 中的 `biome_inherits` 指定。
 * 生成适合小型建筑或手动触发的 ModSDK 分批放置脚本。
-* 回读结构文件并检查 JSON、尺寸、边界、清单计数和必要引用。
+* 构建时检查内存中的 JSON/尺寸、文件存在性、边界、清单计数和必要引用，不立即重开数千个刚写出的文件。
 
 已有输出可以单独复查：
 
 ```console
 python scripts/structure_work.py validate workset/my_palace
 ```
+
+独立 `validate` 会重新解析全部 JSON 并读取每个结构的 NBT 头，但仍不会完整解码每片数万个方块索引。完整 NBT 编解码由小型 round-trip 测试覆盖。
 
 可运行的最小基准位于 [`workset/example_work`](workset/example_work/README.md)。建议先构建该示例，以区分共享工具链问题与新建筑源码问题。
 

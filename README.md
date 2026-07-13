@@ -57,6 +57,20 @@ Installation
 pip install mcstructure
 ```
 
+### Rust-native load acceleration
+
+`Structure.load()` automatically uses the optional Rust NBT decoder when available. For common structures without entities or per-position block/tick metadata, it decodes block indices into compact bytes for NumPy instead of creating one Python tag object per index. Complex structures transparently fall back to the complete Python decoder, so the public call remains unchanged.
+
+Check whether the current installation contains the native decoder:
+
+```python
+from mcstructure import NATIVE_DECODER_AVAILABLE
+
+print(NATIVE_DECODER_AVAILABLE)
+```
+
+Source builds need a Rust toolchain and `setuptools-rust`. The extension is an optional build, so a pure-Python fallback installation remains possible when native compilation is unavailable. Releases should provide platform wheels containing the extension so end users do not need to compile it locally.
+
 
 Basic Usage
 -----------
@@ -133,13 +147,15 @@ The build automatically:
 * Splits the logical canvas into `.mcstructure` pieces of at most 65,536 blocks.
 * Generates NetEase features, feature rules, custom biomes, and dimension JSON for large world-generated structures; `project.json.biome_inherits` selects the inherited vanilla biome.
 * Generates a batched ModSDK placement helper for smaller or manually triggered structures.
-* Loads the structures back and validates JSON, dimensions, bounds, manifest counts, and required references.
+* Validates in-memory JSON and dimensions plus file existence, bounds, manifest counts, and required references without immediately reopening thousands of freshly written files.
 
 Audit an existing output without rewriting it:
 
 ```console
 python scripts/structure_work.py validate workset/my_palace
 ```
+
+Standalone `validate` reparses every JSON file and reads each structure's NBT header, but still avoids decoding every block index in every piece. Small round-trip tests cover complete NBT encoding and decoding.
 
 The runnable [`workset/example_work`](workset/example_work/README.md) project is the minimal reference implementation. Build it first when you need to distinguish a shared-tooling problem from a new generator problem.
 

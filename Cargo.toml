@@ -1,0 +1,17 @@
+[package]
+name = "mcstructure-native"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "_native"
+path = "rust/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.29", features = ["abi3-py312"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

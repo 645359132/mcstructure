@@ -18,7 +18,7 @@ D:\Python3.12\python.exe workset\example_work\main.py
 D:\Python3.12\python.exe scripts\structure_work.py build workset\example_work
 ```
 
-默认命令会依次完成：读取并校验 `project.json`、导入 builder、生成完整逻辑画布、自动切片、写出两套放置资源、加载回读所有 `.mcstructure` 并审计 JSON/尺寸/引用。
+默认命令会依次完成：读取并校验 `project.json`、导入 builder、生成完整逻辑画布、自动切片、写出两套放置资源，并根据内存数据审计尺寸、边界、文件、清单和引用。它不会立即重开数千个刚生成的文件。
 
 只输出一种放置方式：
 
@@ -32,6 +32,8 @@ D:\Python3.12\python.exe workset\example_work\main.py --mode modsdk
 ```powershell
 D:\Python3.12\python.exe scripts\structure_work.py validate workset\example_work
 ```
+
+独立 `validate` 会重新解析全部 JSON，并读取所有 `.mcstructure` 的 NBT 头。完整 NBT 编解码由独立的小型 round-trip 测试覆盖，不会在大型项目中反复解码每个切片的全部方块。
 
 ## 创建新 work
 

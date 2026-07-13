@@ -5,6 +5,7 @@ import pytest
 
 from mcstructure import Block, Structure
 
+import scripts.structure_workflow.runner as workflow_runner
 from scripts.structure_workflow.exporter import export_project
 from scripts.structure_workflow.model import ProjectSpec
 from scripts.structure_workflow.runner import build_structure, validate_output
@@ -74,7 +75,9 @@ def test_contract_rejects_oversized_piece(tmp_path: Path) -> None:
         ProjectSpec.load(work_dir)
 
 
-def test_worldgen_export_includes_valid_custom_biome(tmp_path: Path) -> None:
+def test_worldgen_export_includes_valid_custom_biome(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     spec = ProjectSpec(
         schema_version=1,
         project_name="Biome Work",
@@ -107,4 +110,15 @@ def test_worldgen_export_includes_valid_custom_biome(tmp_path: Path) -> None:
     }
     assert biome["components"]["dm700000003"] == {}
     assert biome["components"]["dm700000003_roofed_forest"] == {}
+
+    def unexpected_full_load(*args: object) -> None:
+        raise AssertionError("generated-piece validation must not fully decode NBT")
+
+    monkeypatch.setattr(Structure, "load", unexpected_full_load)
     assert validate_output(tmp_path, spec) > 0
+
+    def unexpected_header_read(*args: object) -> None:
+        raise AssertionError("fresh-output validation must not reopen structure files")
+
+    monkeypatch.setattr(workflow_runner, "read_structure_size", unexpected_header_read)
+    assert validate_output(tmp_path, spec, deep=False) > 0

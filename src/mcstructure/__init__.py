@@ -7,6 +7,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from functools import partial
+from io import BytesIO
 from itertools import repeat
 from typing import Any, BinaryIO, Tuple, Self, cast
 
@@ -14,6 +15,14 @@ import numpy as np
 from numpy.typing import NDArray
 from ._vendor import nbtx
 from ._fast_nbt import write_simple_structure
+
+try:
+    from ._native import load_simple_structure as _native_load_simple_structure
+except ImportError:
+    _native_load_simple_structure = None
+
+NATIVE_DECODER_AVAILABLE: bool = _native_load_simple_structure is not None
+"""Whether the optional Rust decoder is available to :meth:`Structure.load`."""
 
 
 Coordinate = Tuple[int, int, int]
@@ -320,6 +329,40 @@ class Structure:
         file
             File object to read.
         """
+        if _native_load_simple_structure is not None:
+            data = file.read()
+            native = _native_load_simple_structure(data)
+            if native is not None:
+                return cls._from_native(native)
+            file = BytesIO(data)
+        return cls._load_with_nbtx(file)
+
+    @classmethod
+    def _from_native(
+        cls,
+        native: tuple[
+            tuple[int, int, int],
+            bytes,
+            list[tuple[str, list[tuple[str, int]], list[tuple[str, str]], bool]],
+        ],
+    ) -> Self:
+        size, primary_bytes, palette = native
+        struct = cls(size, None)
+        struct.structure = (
+            np.frombuffer(primary_bytes, dtype="<i4")
+            .astype(np.intc, copy=True)
+            .reshape(size)
+        )
+        for identifier, integer_states, string_states, waterlogged in palette:
+            states: dict[str, BlockStateValue] = dict(integer_states)
+            states.update(string_states)
+            struct._palette.append(
+                Block(identifier, **states, waterlogged=waterlogged)
+            )
+        return struct
+
+    @classmethod
+    def _load_with_nbtx(cls, file: BinaryIO) -> Self:
         nbt_root = nbtx.load(file, endianness="little")
         assert isinstance(nbt_root, nbtx.TagCompound)
         nbt_body_data = nbt_root
@@ -329,14 +372,17 @@ class Structure:
 
         struct = cls(size, None)
 
-        struct.structure = np.array(
-            [x for x in nbt_body["structure"]["block_indices"][0]],
-            dtype=np.intc,
-        ).reshape(size)
+        primary_indices = nbt_body["structure"]["block_indices"][0]
+        secondary_indices = nbt_body["structure"]["block_indices"][1]
+        struct.structure = np.asarray(primary_indices, dtype=np.intc).reshape(size)
 
         struct.entities = nbt_body["structure"]["entities"]
 
-        waterlogged_mask: list[bool] = [value != -1 for value in nbt_body["structure"]["block_indices"][1]]
+        waterlogged_palette_indices = {
+            primary
+            for primary, secondary in zip(primary_indices, secondary_indices)
+            if primary >= 0 and secondary != -1
+        }
 
         nbt_structure = nbt_body_data["structure"]
         assert isinstance(nbt_structure, nbtx.TagCompound)
@@ -357,7 +403,7 @@ class Structure:
                 Block(
                     block["name"],
                     **(block["states"]),
-                    waterlogged=waterlogged_mask[index],
+                    waterlogged=index in waterlogged_palette_indices,
                     block_entity_data=block_entity_data,
                     tick_queue_data=_get_deep(block_position_data, str(index), "tick_queue_data"),
                 )
