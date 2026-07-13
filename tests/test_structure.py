@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from mcstructure import has_suitable_size, STRUCTURE_MAX_SIZE, Structure, Block
+from mcstructure import Block, Structure, STRUCTURE_MAX_SIZE, has_suitable_size, nbtx
 import pytest
 
 
@@ -63,3 +63,36 @@ def test_dump_and_load_with_vendored_nbtx() -> None:
 
     assert loaded.size == (1, 1, 1)
     assert loaded.get_block((0, 0, 0)) == stone
+
+
+def test_fast_dump_matches_reference_encoder() -> None:
+    struct = Structure((2, 3, 4), fill=Block("minecraft:stone"))
+    struct.set_block(
+        (1, 2, 3),
+        Block(
+            "minecraft:oak_stairs",
+            waterlogged=True,
+            upside_down_bit=False,
+            weirdo_direction=2,
+            kind="outer_left",
+        ),
+    )
+    expected = BytesIO()
+    nbtx.dump(struct.as_nbt(), expected, endianness="little")
+    actual = BytesIO()
+
+    struct.dump(actual)
+
+    assert actual.getvalue() == expected.getvalue()
+
+
+def test_dump_falls_back_for_entities() -> None:
+    struct = Structure((1, 1, 1), fill=Block("minecraft:air"))
+    struct.add_entity(nbtx.TagCompound("", []))
+    expected = BytesIO()
+    nbtx.dump(struct.as_nbt(), expected, endianness="little")
+    actual = BytesIO()
+
+    struct.dump(actual)
+
+    assert actual.getvalue() == expected.getvalue()

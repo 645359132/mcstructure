@@ -13,6 +13,7 @@ from typing import Any, BinaryIO, Tuple, Self, cast
 import numpy as np
 from numpy.typing import NDArray
 from ._vendor import nbtx
+from ._fast_nbt import write_simple_structure
 
 
 Coordinate = Tuple[int, int, int]
@@ -639,6 +640,24 @@ class Structure:
         file
             File object to write to.
         """
+        has_position_data = any(
+            block.block_entity_data is not None or block.tick_queue_data is not None
+            for block in self._palette
+        )
+        if not self.entities and not has_position_data and self._palette:
+            water_index = self._water_index() if any(
+                block.waterlogged for block in self._palette
+            ) else -1
+            write_simple_structure(
+                file,
+                self._size,
+                self.structure,
+                self._palette,
+                compatibility_version=COMPABILITY_VERSION,
+                water_index=water_index,
+            )
+            return
+
         nbt = self.as_nbt()
         nbtx.dump(nbt, file, endianness="little")
 
