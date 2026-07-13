@@ -46,7 +46,8 @@ def build_structure() -> Structure:
 - `builder`：源码入口。
 - `structure_size`：完整局部画布 `[X, Y, Z]`。
 - `world_origin`：世界中的西北下角；X/Z 必须对齐 16 格。
-- `dimension_id` / `dimension_mod_id` / `dimension_biome`：网易自定义维度参数。
+- `dimension_id` / `dimension_mod_id` / `dimension_biome`：网易自定义维度参数；生物群系标识同时作为 feature rule 使用的 tag。
+- `biome_inherits`：生成的自定义生物群系所继承的原版群系，默认 `plains`；例如林地府邸可设为 `roofed_forest`。
 - `repeat_period`：worldgen 锚点重复距离，必须是 16 的正整数倍。
 - `worldgen_piece_size`：默认 `[16, 256, 16]`。
 - `modsdk_piece_size`：默认 `[32, 64, 32]`。
@@ -69,6 +70,7 @@ def build_structure() -> Structure:
 - `structures/<namespace>_worldgen/*.mcstructure`
 - `netease_features/*.json`
 - `netease_feature_rules/*.json`
+- `netease_biomes/dm<dimension_id>/<dimension_biome>.json`
 - `netease_dimension/*.json`
 - `structures/<namespace>_modsdk/*.mcstructure`
 - `place_with_modsdk.py`

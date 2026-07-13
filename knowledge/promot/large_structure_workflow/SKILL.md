@@ -30,7 +30,7 @@ description: Builds a complete AI-authored Minecraft Bedrock structure work whos
 ## 不要做
 
 - 不手写或修改 `out/`。
-- 不在 work 内复制 exporter、feature rule、维度 JSON 或 ModSDK 队列代码。
+- 不在 work 内复制 exporter、feature rule、生物群系/维度 JSON 或 ModSDK 队列代码。
 - 不用大量孤立的 `set_block` 替代可命名、可复用的几何函数。
 - 不通过缩小需求、删掉内部空间或填死建筑来掩盖构建失败。
 - 不在未验证时声称已完成。

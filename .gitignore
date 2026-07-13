@@ -166,5 +166,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 workset/illager_manor
+workset/chinese_capital
 workset/example_work/out/
 knowledge/reference/

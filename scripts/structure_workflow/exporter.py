@@ -118,9 +118,11 @@ def _write_worldgen(
     features_dir = output_dir / "netease_features"
     rules_dir = output_dir / "netease_feature_rules"
     dimension_dir = output_dir / "netease_dimension"
+    biome_dir = output_dir / "netease_biomes" / spec.dimension_biome_namespace
     features_dir.mkdir(parents=True, exist_ok=True)
     rules_dir.mkdir(parents=True, exist_ok=True)
     dimension_dir.mkdir(parents=True, exist_ok=True)
+    biome_dir.mkdir(parents=True, exist_ok=True)
 
     for placement in placements:
         feature_identifier = f"{spec.namespace}:{placement.name}_structure_feature"
@@ -210,6 +212,27 @@ def _write_worldgen(
             },
         },
     )
+    write_json(
+        biome_dir / f"{spec.dimension_biome}.json",
+        {
+            "format_version": "1.14.0",
+            "minecraft:biome": {
+                "description": {
+                    "identifier": spec.dimension_biome,
+                    "inherits": spec.biome_inherits,
+                },
+                "components": {
+                    "minecraft:overworld_generation_rules": {
+                        "hills_transformation": spec.dimension_biome,
+                        "mutate_transformation": spec.dimension_biome,
+                        "generate_for_climates": [["medium", 0]],
+                    },
+                    spec.dimension_biome_namespace: {},
+                    spec.dimension_biome: {},
+                },
+            },
+        },
+    )
 
 
 def _relative(variable: str, offset: int) -> str:
@@ -289,6 +312,7 @@ def _clean_owned_outputs(output_dir: Path) -> None:
         "netease_features",
         "netease_feature_rules",
         "netease_dimension",
+        "netease_biomes",
     ):
         path = output_dir / name
         if path.exists():
@@ -368,6 +392,7 @@ def export_project(
             "world_origin": spec.world_origin,
             "dimension_id": spec.dimension_id,
             "dimension_biome": spec.dimension_biome,
+            "biome_inherits": spec.biome_inherits,
             "repeat_period": spec.repeat_period,
             "recommended_teleport": teleport_position,
             "teleport_command": teleport_command,

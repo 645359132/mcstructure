@@ -31,6 +31,7 @@ def create_work(
     origin: tuple[int, int, int],
     dimension_id: int | None,
     dimension_biome: str | None,
+    biome_inherits: str = "plains",
 ) -> None:
     work_dir = work_dir.resolve()
     if work_dir.exists() and any(work_dir.iterdir()):
@@ -53,6 +54,7 @@ def create_work(
         "dimension_id": dimension_id,
         "dimension_mod_id": namespace,
         "dimension_biome": dimension_biome,
+        "biome_inherits": biome_inherits,
         "repeat_period": 4096,
         "worldgen_piece_size": [16, 256, 16],
         "modsdk_piece_size": [32, 64, 32],

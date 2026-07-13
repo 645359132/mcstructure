@@ -36,6 +36,7 @@ class ProjectSpec:
     dimension_id: int
     dimension_mod_id: str
     dimension_biome: str
+    biome_inherits: str = "plains"
     repeat_period: int = 4096
     worldgen_piece_size: Vec3 = (16, 256, 16)
     modsdk_piece_size: Vec3 = (32, 64, 32)
@@ -96,6 +97,10 @@ class ProjectSpec:
     def modsdk_structure_namespace(self) -> str:
         return f"{self.namespace}_modsdk"
 
+    @property
+    def dimension_biome_namespace(self) -> str:
+        return f"dm{self.dimension_id}"
+
     def validate(self) -> None:
         if self.schema_version != 1:
             raise ValueError("unsupported project schema_version; expected 1")
@@ -103,6 +108,7 @@ class ProjectSpec:
             ("namespace", self.namespace),
             ("structure_name", self.structure_name),
             ("dimension_mod_id", self.dimension_mod_id),
+            ("dimension_biome", self.dimension_biome),
         ):
             if fullmatch(r"[a-z0-9_]+", value) is None:
                 raise ValueError(
@@ -116,8 +122,8 @@ class ProjectSpec:
             raise ValueError("builder must use module.path:function syntax")
         if self.dimension_id <= 0:
             raise ValueError("dimension_id must be positive")
-        if not self.dimension_biome:
-            raise ValueError("dimension_biome must not be empty")
+        if fullmatch(r"[a-z0-9_.:-]+", self.biome_inherits) is None:
+            raise ValueError("biome_inherits must be a lowercase biome identifier")
         if any(dimension <= 0 for dimension in self.structure_size):
             raise ValueError("structure_size dimensions must be positive")
         if any(dimension <= 0 for dimension in self.worldgen_piece_size):

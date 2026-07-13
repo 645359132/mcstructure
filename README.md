@@ -131,7 +131,7 @@ python workset/my_palace/main.py
 The build automatically:
 
 * Splits the logical canvas into `.mcstructure` pieces of at most 65,536 blocks.
-* Generates NetEase features, feature rules, and custom-dimension JSON for large world-generated structures.
+* Generates NetEase features, feature rules, custom biomes, and dimension JSON for large world-generated structures; `project.json.biome_inherits` selects the inherited vanilla biome.
 * Generates a batched ModSDK placement helper for smaller or manually triggered structures.
 * Loads the structures back and validates JSON, dimensions, bounds, manifest counts, and required references.
 

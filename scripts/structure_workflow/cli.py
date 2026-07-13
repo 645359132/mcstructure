@@ -26,6 +26,11 @@ def main() -> int:
     new.add_argument("--origin", type=int, nargs=3, default=(1024, 56, 1024))
     new.add_argument("--dimension-id", type=int)
     new.add_argument("--dimension-biome")
+    new.add_argument(
+        "--biome-inherits",
+        default="plains",
+        help="vanilla biome inherited by the generated NetEase biome",
+    )
 
     build = subparsers.add_parser("build", help="build, export, and validate a work")
     build.add_argument("work_dir", type=Path)
@@ -48,6 +53,7 @@ def main() -> int:
             origin=_vec3(args.origin),
             dimension_id=args.dimension_id,
             dimension_biome=args.dimension_biome,
+            biome_inherits=args.biome_inherits,
         )
         print(f"Created {args.work_dir.resolve()}")
         print(

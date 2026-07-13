@@ -91,7 +91,7 @@ pip install mcstructure
 AI 协作大型建筑开发
 -------------------
 
-本仓库提供了一套适合与 AI 协作的大型建筑开发方式。核心原则是：**AI 只负责建筑设计与源码，稳定工具负责切片、网易配置、放置脚本和输出校验。** 这样可以持续修改建筑，而不需要让 AI 每次重新编写 `netease_feature_rules`、自定义维度 JSON 或 ModSDK 放置队列。
+本仓库提供了一套适合与 AI 协作的大型建筑开发方式。核心原则是：**AI 只负责建筑设计与源码，稳定工具负责切片、网易配置、放置脚本和输出校验。** 这样可以持续修改建筑，而不需要让 AI 每次重新编写 `netease_feature_rules`、自定义生物群系/维度 JSON 或 ModSDK 放置队列。
 
 > [!NOTE]
 > 下面的命令用于克隆后的项目仓库，不属于 PyPI 包的公共 API。
@@ -132,7 +132,7 @@ python workset/my_palace/main.py
 构建命令会自动完成：
 
 * 将完整逻辑画布切成体积不超过 65,536 方块的 `.mcstructure`。
-* 生成大型建筑所需的 `netease_features`、`netease_feature_rules` 和自定义维度 JSON。
+* 生成大型建筑所需的 `netease_features`、`netease_feature_rules`、`netease_biomes` 和自定义维度 JSON；继承的原版群系由 `project.json` 中的 `biome_inherits` 指定。
 * 生成适合小型建筑或手动触发的 ModSDK 分批放置脚本。
 * 回读结构文件并检查 JSON、尺寸、边界、清单计数和必要引用。
 

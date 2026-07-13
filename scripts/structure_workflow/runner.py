@@ -160,6 +160,57 @@ def validate_output(work_dir: Path, spec: ProjectSpec) -> int:
         )
         if not expected_dimension.is_file():
             raise ValueError(f"missing dimension definition: {expected_dimension}")
+        dimension_root = _load_json(expected_dimension)
+        dimension_info = (
+            dimension_root.get("netease:dimension_info")
+            if isinstance(dimension_root, dict)
+            else None
+        )
+        dimension_components = (
+            dimension_info.get("components")
+            if isinstance(dimension_info, dict)
+            else None
+        )
+        biome_sources = (
+            dimension_components.get("netease:biome_source")
+            if isinstance(dimension_components, dict)
+            else None
+        )
+        biome_source = (
+            biome_sources[0]
+            if isinstance(biome_sources, list) and biome_sources
+            else None
+        )
+        biome_pool = (
+            biome_source.get("pool") if isinstance(biome_source, dict) else None
+        )
+        if biome_pool is None:
+            raise ValueError(f"malformed dimension biome source: {expected_dimension}")
+        if biome_pool != [{"biome_type": spec.dimension_biome, "weight": 1}]:
+            raise ValueError("dimension biome source differs from project.json")
+        expected_biome = (
+            output_dir
+            / "netease_biomes"
+            / spec.dimension_biome_namespace
+            / f"{spec.dimension_biome}.json"
+        )
+        if not expected_biome.is_file():
+            raise ValueError(f"missing biome definition: {expected_biome}")
+        biome_root = _load_json(expected_biome)
+        biome = (
+            biome_root.get("minecraft:biome") if isinstance(biome_root, dict) else None
+        )
+        description = biome.get("description") if isinstance(biome, dict) else None
+        components = biome.get("components") if isinstance(biome, dict) else None
+        if not isinstance(description, dict) or not isinstance(components, dict):
+            raise ValueError(f"malformed biome definition: {expected_biome}")
+        if description.get("identifier") != spec.dimension_biome:
+            raise ValueError("generated biome identifier differs from project.json")
+        if description.get("inherits") != spec.biome_inherits:
+            raise ValueError("generated biome inheritance differs from project.json")
+        for tag in (spec.dimension_biome_namespace, spec.dimension_biome):
+            if components.get(tag) != {}:
+                raise ValueError(f"generated biome is missing required tag: {tag}")
     if placements_root["modsdk"]:
         modsdk_path = output_dir / "place_with_modsdk.py"
         compile(modsdk_path.read_text(encoding="utf-8"), str(modsdk_path), "exec")

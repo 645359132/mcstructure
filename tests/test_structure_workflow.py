@@ -3,8 +3,11 @@ from pathlib import Path
 
 import pytest
 
+from mcstructure import Block, Structure
+
+from scripts.structure_workflow.exporter import export_project
 from scripts.structure_workflow.model import ProjectSpec
-from scripts.structure_workflow.runner import build_structure
+from scripts.structure_workflow.runner import build_structure, validate_output
 from scripts.structure_workflow.scaffold import create_work
 
 
@@ -19,6 +22,7 @@ def test_example_work_contract_matches_builder() -> None:
 
     assert structure.size == (96, 48, 96)
     assert spec.builder == "example_project:build_structure"
+    assert spec.biome_inherits == "plains"
 
 
 def test_scaffold_creates_only_source_contract_not_generated_output(
@@ -35,11 +39,13 @@ def test_scaffold_creates_only_source_contract_not_generated_output(
         origin=(1024, 64, 1024),
         dimension_id=700_000_001,
         dimension_biome="new_work_plains",
+        biome_inherits="plains",
     )
 
     spec = ProjectSpec.load(work_dir)
     assert spec.namespace == "new_work"
     assert spec.builder == "new_work_project:build_structure"
+    assert spec.biome_inherits == "plains"
     assert (work_dir / "BRIEF.md").is_file()
     assert (work_dir / "main.py").is_file()
     assert (work_dir / "src" / "new_work_project" / "build.py").is_file()
@@ -66,3 +72,39 @@ def test_contract_rejects_oversized_piece(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="65,536"):
         ProjectSpec.load(work_dir)
+
+
+def test_worldgen_export_includes_valid_custom_biome(tmp_path: Path) -> None:
+    spec = ProjectSpec(
+        schema_version=1,
+        project_name="Biome Work",
+        namespace="biome_work",
+        structure_name="landmark",
+        builder="biome_work:build_structure",
+        structure_size=(16, 8, 16),
+        world_origin=(1024, 64, 1024),
+        dimension_id=700_000_003,
+        dimension_mod_id="biome_work",
+        dimension_biome="dm700000003_roofed_forest",
+        biome_inherits="roofed_forest",
+    )
+    structure = Structure(spec.structure_size, Block("minecraft:stone"))
+
+    export_project(structure, spec, tmp_path / "out", mode="worldgen")
+
+    biome_path = (
+        tmp_path
+        / "out"
+        / "netease_biomes"
+        / "dm700000003"
+        / "dm700000003_roofed_forest.json"
+    )
+    biome_root = json.loads(biome_path.read_text(encoding="utf-8"))
+    biome = biome_root["minecraft:biome"]
+    assert biome["description"] == {
+        "identifier": "dm700000003_roofed_forest",
+        "inherits": "roofed_forest",
+    }
+    assert biome["components"]["dm700000003"] == {}
+    assert biome["components"]["dm700000003_roofed_forest"] == {}
+    assert validate_output(tmp_path, spec) > 0
