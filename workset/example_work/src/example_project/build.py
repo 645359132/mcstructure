@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from mcstructure import Block, Structure
 
-from .config import CONFIG, Vec3
-
-
+Vec3 = tuple[int, int, int]
+SIZE: Vec3 = (96, 48, 96)
 AIR = Block("minecraft:air")
 STONE = Block("minecraft:stonebrick")
 STONE_DETAIL = Block("minecraft:chiseled_stone_bricks")
@@ -67,9 +66,8 @@ def _build_tower(structure: Structure, center_x: int, center_z: int) -> None:
 
 def build_structure() -> Structure:
     """Return one logical structure; the exporter handles all chunk splitting."""
-    CONFIG.validate()
-    size_x, _, size_z = CONFIG.structure_size
-    structure = Structure(CONFIG.structure_size, AIR)
+    size_x, _, size_z = SIZE
+    structure = Structure(SIZE, AIR)
 
     # Foundation and approach plaza.
     fill(structure, (0, 0, 0), (size_x - 1, 2, size_z - 1), STONE)

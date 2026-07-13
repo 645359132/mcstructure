@@ -1,4 +1,4 @@
-"""Export one logical build for NetEase worldgen and ModSDK placement."""
+"""Export one logical structure into NetEase worldgen and ModSDK resources."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any, Literal
 import numpy as np
 from mcstructure import Block, Structure
 
-from .config import ProjectConfig, Vec3
+from .model import ProjectSpec, Vec3
 
 
 ExportMode = Literal["all", "worldgen", "modsdk"]
@@ -37,7 +37,7 @@ class ExportReport:
     teleport_command: str
 
 
-def _json(path: Path, value: Any) -> None:
+def write_json(path: Path, value: Any) -> None:
     path.write_text(
         json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
@@ -73,6 +73,8 @@ def _split(
                     continue
                 actual_size = (x2 - x0, y2 - y0, z2 - z0)
                 piece = Structure(actual_size, None)
+                # A slice must keep the source palette indices intact. Structure does
+                # not yet expose a public constructor for this zero-copy operation.
                 piece._palette = structure._palette.copy()
                 piece.structure = region.copy()
                 name = f"{name_prefix}_x{x0:04d}_y{y0:04d}_z{z0:04d}"
@@ -110,7 +112,7 @@ def _origin_expression(variable: str, target: int, period: int) -> str:
 
 def _write_worldgen(
     output_dir: Path,
-    config: ProjectConfig,
+    spec: ProjectSpec,
     placements: list[Placement],
 ) -> None:
     features_dir = output_dir / "netease_features"
@@ -121,8 +123,8 @@ def _write_worldgen(
     dimension_dir.mkdir(parents=True, exist_ok=True)
 
     for placement in placements:
-        feature_identifier = f"{config.namespace}:{placement.name}_structure_feature"
-        _json(
+        feature_identifier = f"{spec.namespace}:{placement.name}_structure_feature"
+        write_json(
             features_dir / f"{placement.name}_structure_feature.json",
             {
                 "format_version": "1.14.0",
@@ -133,24 +135,22 @@ def _write_worldgen(
                 },
             },
         )
-        target_x = config.world_origin[0] + placement.offset[0]
-        target_y = config.world_origin[1] + placement.offset[1]
-        target_z = config.world_origin[2] + placement.offset[2]
+        target_x = spec.world_origin[0] + placement.offset[0]
+        target_y = spec.world_origin[1] + placement.offset[1]
+        target_z = spec.world_origin[2] + placement.offset[2]
         iterations = (
-            _origin_expression("variable.originx", target_x, config.repeat_period)
+            _origin_expression("variable.originx", target_x, spec.repeat_period)
             + " && "
-            + _origin_expression("variable.originz", target_z, config.repeat_period)
+            + _origin_expression("variable.originz", target_z, spec.repeat_period)
             + "?1:0"
         )
-        _json(
+        write_json(
             rules_dir / f"{placement.name}_feature_rule.json",
             {
                 "format_version": "1.14.0",
                 "minecraft:feature_rules": {
                     "description": {
-                        "identifier": (
-                            f"{config.namespace}:{placement.name}_feature_rule"
-                        ),
+                        "identifier": f"{spec.namespace}:{placement.name}_feature_rule",
                         "places_feature": feature_identifier,
                     },
                     "conditions": {
@@ -163,7 +163,7 @@ def _write_worldgen(
                                             {
                                                 "test": "has_biome_tag",
                                                 "operator": "==",
-                                                "value": config.dimension_biome,
+                                                "value": spec.dimension_biome,
                                             }
                                         ]
                                     }
@@ -183,26 +183,24 @@ def _write_worldgen(
             },
         )
 
-    _json(
+    write_json(
         dimension_dir / "dimension_config.json",
         {
             "netease:dimension": {
-                "modDimensionId": [config.dimension_id],
-                "modId": config.dimension_mod_id,
+                "modDimensionId": [spec.dimension_id],
+                "modId": spec.dimension_mod_id,
             }
         },
     )
-    _json(
-        dimension_dir / f"dm{config.dimension_id}.json",
+    write_json(
+        dimension_dir / f"dm{spec.dimension_id}.json",
         {
             "format_version": "1.14.0",
             "netease:dimension_info": {
                 "components": {
                     "netease:biome_source": [
                         {
-                            "pool": [
-                                {"biome_type": config.dimension_biome, "weight": 1}
-                            ],
+                            "pool": [{"biome_type": spec.dimension_biome, "weight": 1}],
                             "type": "random_with_weight",
                         }
                     ],
@@ -222,18 +220,18 @@ def _relative(variable: str, offset: int) -> str:
 
 def _write_modsdk(
     output_dir: Path,
-    config: ProjectConfig,
+    spec: ProjectSpec,
     placements: list[Placement],
 ) -> None:
-    center_x = config.structure_size[0] // 2
-    center_z = config.structure_size[2] // 2
+    center_x = spec.structure_size[0] // 2
+    center_z = spec.structure_size[2] // 2
     ordered = sorted(
         placements,
         key=lambda item: (item.offset[0] + item.size[0] // 2 - center_x) ** 2
         + (item.offset[2] + item.size[2] // 2 - center_z) ** 2,
     )
     lines = [
-        '"""Generated ModSDK placement helper. Copy this into server-side code."""',
+        '"""Generated ModSDK placement helper. Copy into server-side code."""',
         "",
         "",
         "def place_generated_structure(serverApi, levelId, entity_id):",
@@ -255,10 +253,10 @@ def _write_modsdk(
     lines.extend(
         [
             "    ]",
-            f"    batch_size = {config.modsdk_batch_size}",
-            f"    batch_delay = {config.modsdk_batch_delay!r}",
-            f"    placement_passes = {config.modsdk_passes}",
-            f"    pass_delay = {config.modsdk_pass_delay!r}",
+            f"    batch_size = {spec.modsdk_batch_size}",
+            f"    batch_delay = {spec.modsdk_batch_delay!r}",
+            f"    placement_passes = {spec.modsdk_passes}",
+            f"    pass_delay = {spec.modsdk_pass_delay!r}",
             '    state = {"index": 0, "pass": 0}',
             "",
             "    def place_next_batch():",
@@ -301,26 +299,25 @@ def _clean_owned_outputs(output_dir: Path) -> None:
             path.unlink()
 
 
-def _teleport(config: ProjectConfig) -> tuple[Vec3, str]:
-    # Stand outside the negative-Z facade and face south toward the build.
-    x = config.world_origin[0] + config.structure_size[0] // 2
-    y = config.world_origin[1] + 10
-    z = config.world_origin[2] - 12
+def _teleport(spec: ProjectSpec) -> tuple[Vec3, str]:
+    x = spec.world_origin[0] + spec.structure_size[0] // 2
+    y = spec.world_origin[1] + 10
+    z = spec.world_origin[2] - 12
     return (x, y, z), f"/tp @s {x} {y} {z} 0 15"
 
 
 def export_project(
     structure: Structure,
-    config: ProjectConfig,
+    spec: ProjectSpec,
     output_dir: Path,
     *,
     mode: ExportMode = "all",
 ) -> ExportReport:
-    """Export worldgen resources, ModSDK resources, or both."""
-    config.validate()
-    if structure.size != config.structure_size:
+    """Export generated output only; never modify AI-authored source files."""
+    spec.validate()
+    if structure.size != spec.structure_size:
         raise ValueError(
-            f"builder returned {structure.size}, expected {config.structure_size}"
+            f"builder returned {structure.size}, expected {spec.structure_size}"
         )
     output_dir.mkdir(parents=True, exist_ok=True)
     _clean_owned_outputs(output_dir)
@@ -332,42 +329,46 @@ def export_project(
             output_dir,
             _split(
                 structure,
-                config.worldgen_piece_size,
-                name_prefix=config.structure_name,
-                structure_namespace=config.worldgen_structure_namespace,
+                spec.worldgen_piece_size,
+                name_prefix=spec.structure_name,
+                structure_namespace=spec.worldgen_structure_namespace,
             ),
         )
-        _write_worldgen(output_dir, config, worldgen)
+        _write_worldgen(output_dir, spec, worldgen)
     if mode in ("all", "modsdk"):
         modsdk = _write_structures(
             output_dir,
             _split(
                 structure,
-                config.modsdk_piece_size,
-                name_prefix=config.structure_name,
-                structure_namespace=config.modsdk_structure_namespace,
+                spec.modsdk_piece_size,
+                name_prefix=spec.structure_name,
+                structure_namespace=spec.modsdk_structure_namespace,
             ),
         )
-        _write_modsdk(output_dir, config, modsdk)
+        _write_modsdk(output_dir, spec, modsdk)
 
-    teleport_position, teleport_command = _teleport(config)
-    all_placements = {
-        "worldgen": [
-            asdict(item) | {"identifier": item.identifier} for item in worldgen
-        ],
-        "modsdk": [asdict(item) | {"identifier": item.identifier} for item in modsdk],
-    }
-    _json(output_dir / "placements.json", all_placements)
-    _json(
+    teleport_position, teleport_command = _teleport(spec)
+    write_json(
+        output_dir / "placements.json",
+        {
+            "worldgen": [
+                asdict(item) | {"identifier": item.identifier} for item in worldgen
+            ],
+            "modsdk": [
+                asdict(item) | {"identifier": item.identifier} for item in modsdk
+            ],
+        },
+    )
+    write_json(
         output_dir / "project_manifest.json",
         {
-            "project": config.project_name,
-            "namespace": config.namespace,
-            "structure_size": config.structure_size,
-            "world_origin": config.world_origin,
-            "dimension_id": config.dimension_id,
-            "dimension_biome": config.dimension_biome,
-            "repeat_period": config.repeat_period,
+            "project": spec.project_name,
+            "namespace": spec.namespace,
+            "structure_size": spec.structure_size,
+            "world_origin": spec.world_origin,
+            "dimension_id": spec.dimension_id,
+            "dimension_biome": spec.dimension_biome,
+            "repeat_period": spec.repeat_period,
             "recommended_teleport": teleport_position,
             "teleport_command": teleport_command,
             "worldgen_pieces": len(worldgen),

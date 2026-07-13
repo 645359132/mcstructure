@@ -88,6 +88,62 @@ pip install mcstructure
 
 	```
 
+AI 协作大型建筑开发
+-------------------
+
+本仓库提供了一套适合与 AI 协作的大型建筑开发方式。核心原则是：**AI 只负责建筑设计与源码，稳定工具负责切片、网易配置、放置脚本和输出校验。** 这样可以持续修改建筑，而不需要让 AI 每次重新编写 `netease_feature_rules`、自定义维度 JSON 或 ModSDK 放置队列。
+
+> [!NOTE]
+> 下面的命令用于克隆后的项目仓库，不属于 PyPI 包的公共 API。
+
+标准 work 目录如下：
+
+```text
+workset/<work>/
+├── BRIEF.md           # 建筑需求、路线和验收条件
+├── project.json       # 画布尺寸、builder、维度和切片参数
+├── main.py            # 该 work 的一键入口
+├── src/<package>/     # AI 编写的建筑生成器
+└── out/               # 自动生成，不手工修改或提交
+```
+
+其中 `project.json` 声明的 builder 必须是一个零参数函数，并返回尺寸严格等于 `structure_size` 的完整 `mcstructure.Structure`。AI 应只修改目标 work 的 `main.py` 与 `src/`；`.mcstructure` 切片、feature、feature rule、维度文件、ModSDK 队列和输出清单统一由共享工具生成。
+
+创建一个新 work：
+
+```console
+python scripts/structure_work.py new workset/my_palace --project-name "My Palace" --size 192 80 192 --origin 2048 56 2048
+```
+
+接着填写生成的 `BRIEF.md`，并将 [`knowledge/promot/large_structure_workflow/PROMPT_TEMPLATE.md`](knowledge/promot/large_structure_workflow/PROMPT_TEMPLATE.md) 交给 AI。完整执行协议见 [`SKILL.md`](knowledge/promot/large_structure_workflow/SKILL.md)，工程字段和坐标约定见 [`WORK_CONTRACT.md`](knowledge/promot/large_structure_workflow/WORK_CONTRACT.md)。
+
+一次构建、导出并校验所有内容：
+
+```console
+python scripts/structure_work.py build workset/my_palace
+```
+
+也可以直接运行 work 自己的入口：
+
+```console
+python workset/my_palace/main.py
+```
+
+构建命令会自动完成：
+
+* 将完整逻辑画布切成体积不超过 65,536 方块的 `.mcstructure`。
+* 生成大型建筑所需的 `netease_features`、`netease_feature_rules` 和自定义维度 JSON。
+* 生成适合小型建筑或手动触发的 ModSDK 分批放置脚本。
+* 回读结构文件并检查 JSON、尺寸、边界、清单计数和必要引用。
+
+已有输出可以单独复查：
+
+```console
+python scripts/structure_work.py validate workset/my_palace
+```
+
+可运行的最小基准位于 [`workset/example_work`](workset/example_work/README.md)。建议先构建该示例，以区分共享工具链问题与新建筑源码问题。
+
 妙用链接
 ------------
 

@@ -87,6 +87,62 @@ with open("house.mcstructure", "rb") as f:
     struct = Structure.load(f)
 ```
 
+AI-Assisted Large-Structure Workflow
+------------------------------------
+
+This repository includes a workflow for building large structures with an AI collaborator. Its central rule is: **AI authors the building design and source code; deterministic tooling owns slicing, NetEase configuration, placement scripts, and output validation.** This keeps generated platform files out of prompts and makes architectural iterations reproducible.
+
+> [!NOTE]
+> These commands are repository-local development tools, not part of the public PyPI API.
+
+A standard work directory contains:
+
+```text
+workset/<work>/
+├── BRIEF.md           # Building requirements, route, and acceptance criteria
+├── project.json       # Canvas, builder, dimension, and slicing contract
+├── main.py            # One-command entry point for this work
+├── src/<package>/     # AI-authored building generator
+└── out/               # Generated output; do not edit or commit
+```
+
+The builder declared in `project.json` must be a zero-argument function returning one complete `mcstructure.Structure` whose size exactly matches `structure_size`. The AI should edit only the target work's `main.py` and `src/`; the shared workflow generates `.mcstructure` pieces, features, feature rules, dimension files, the ModSDK queue, and manifests.
+
+Create a work shell:
+
+```console
+python scripts/structure_work.py new workset/my_palace --project-name "My Palace" --size 192 80 192 --origin 2048 56 2048
+```
+
+Fill in the generated `BRIEF.md`, then give the AI the repository's [prompt template](knowledge/promot/large_structure_workflow/PROMPT_TEMPLATE.md). See the complete [AI workflow](knowledge/promot/large_structure_workflow/SKILL.md) and [work contract](knowledge/promot/large_structure_workflow/WORK_CONTRACT.md) for the implementation rules.
+
+Build, export, and validate everything in one pass:
+
+```console
+python scripts/structure_work.py build workset/my_palace
+```
+
+The generated `main.py` is also a valid entry point:
+
+```console
+python workset/my_palace/main.py
+```
+
+The build automatically:
+
+* Splits the logical canvas into `.mcstructure` pieces of at most 65,536 blocks.
+* Generates NetEase features, feature rules, and custom-dimension JSON for large world-generated structures.
+* Generates a batched ModSDK placement helper for smaller or manually triggered structures.
+* Loads the structures back and validates JSON, dimensions, bounds, manifest counts, and required references.
+
+Audit an existing output without rewriting it:
+
+```console
+python scripts/structure_work.py validate workset/my_palace
+```
+
+The runnable [`workset/example_work`](workset/example_work/README.md) project is the minimal reference implementation. Build it first when you need to distinguish a shared-tooling problem from a new generator problem.
+
 
 References
 ----------
