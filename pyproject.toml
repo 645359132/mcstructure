@@ -8,9 +8,8 @@ version = "0.0.1b6"
 description = "Read and write Minecraft .mcstructure files."
 dependencies = [
     "numpy==2.3.0",
-    "nbtx==0.4.1",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 readme = "README.md"
 license = {text = "MIT"}
 classifiers = [
@@ -20,6 +19,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Games/Entertainment",
     "Typing :: Typed",
 ]
@@ -43,6 +43,9 @@ docs = [
 
 [tool.mypy]
 strict = true
+
+[tool.setuptools.package-data]
+mcstructure = ["_vendor/NBTX_LICENSE.txt"]
 
 [project.urls]
 "Documentation" = "https://mcstructure.readthedocs.io/en/latest/"

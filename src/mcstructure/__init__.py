@@ -12,7 +12,7 @@ from typing import Any, BinaryIO, Tuple, Self, cast
 
 import numpy as np
 from numpy.typing import NDArray
-import nbtx
+from ._vendor import nbtx
 
 
 Coordinate = Tuple[int, int, int]

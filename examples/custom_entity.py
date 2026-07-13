@@ -1,5 +1,4 @@
-from mcstructure import Block, Structure
-import nbtx
+from mcstructure import Block, Structure, nbtx
 from pathlib import Path
 
 here = Path(__file__).parent

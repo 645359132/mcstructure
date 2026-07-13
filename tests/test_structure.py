@@ -1,3 +1,5 @@
+from io import BytesIO
+
 from mcstructure import has_suitable_size, STRUCTURE_MAX_SIZE, Structure, Block
 import pytest
 
@@ -48,3 +50,16 @@ def test_combine() -> None:
     assert struct_c.get_block((0, 2, 0)) == void
     assert struct_c.get_block((0, 2, 1)) == dirt
     assert struct_c.get_block((0, 2, 2)) == dirt
+
+
+def test_dump_and_load_with_vendored_nbtx() -> None:
+    stone = Block("minecraft:stone")
+    struct = Structure((1, 1, 1), fill=stone)
+    output = BytesIO()
+
+    struct.dump(output)
+    output.seek(0)
+    loaded = Structure.load(output)
+
+    assert loaded.size == (1, 1, 1)
+    assert loaded.get_block((0, 0, 0)) == stone
