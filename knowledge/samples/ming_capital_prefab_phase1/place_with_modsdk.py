@@ -1,0 +1,12 @@
+pos = CF.CreatePos(entity_id).GetFootPos()
+x, y, z = pos
+x = int(x)
+y = int(y)
+z = int(z)
+comp = serverApi.GetEngineCompFactory().CreateGame(levelId)
+dim = CF.CreateDimension(entity_id).GetEntityDimensionId()
+comp.PlaceStructure(None, (x + -152, y, z + -24), "ming_capital_prefab_phase1_v13:01_hutong_courtyard_residence", dim, 0)
+comp.PlaceStructure(None, (x + -88, y, z + -24), "ming_capital_prefab_phase1_v13:02_street_shop", dim, 0)
+comp.PlaceStructure(None, (x + -24, y, z + -24), "ming_capital_prefab_phase1_v13:03_yamen_gatehall", dim, 0)
+comp.PlaceStructure(None, (x + 40, y, z + -24), "ming_capital_prefab_phase1_v13:04_palace_corridor", dim, 0)
+comp.PlaceStructure(None, (x + 104, y, z + -24), "ming_capital_prefab_phase1_v13:05_palace_gate", dim, 0)
