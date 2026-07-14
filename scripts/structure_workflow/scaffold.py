@@ -101,9 +101,16 @@ if __name__ == "__main__":
 
 
 def _builder_template(size: tuple[int, int, int]) -> str:
+    dense_bytes = size[0] * size[1] * size[2] * 4
+    if dense_bytes >= 256 * 1024 * 1024:
+        canvas_import = "Block, StructurePlan"
+        canvas_type = "StructurePlan"
+    else:
+        canvas_import = "Block, Structure"
+        canvas_type = "Structure"
     return f'''"""Replace this starter with the architecture described in BRIEF.md."""
 
-from mcstructure import Block, Structure
+from mcstructure import {canvas_import}
 
 
 SIZE = {size!r}
@@ -111,9 +118,9 @@ AIR = Block("minecraft:air")
 FOUNDATION = Block("minecraft:stonebrick")
 
 
-def build_structure() -> Structure:
+def build_structure() -> {canvas_type}:
     """Return one logical canvas; shared tooling handles every export format."""
-    structure = Structure(SIZE, AIR)
+    structure = {canvas_type}(SIZE, AIR)
     structure.set_blocks((0, 0, 0), (SIZE[0] - 1, 2, SIZE[2] - 1), FOUNDATION)
     return structure
 '''

@@ -1,0 +1,1 @@
+{"schema_version": 1, "project_name": "Bad Work", "namespace": "bad_work", "structure_name": "landmark", "builder": "bad_work:build_structure", "structure_size": [128, 64, 128], "world_origin": [1024, 64, 1024], "dimension_id": 700000002, "dimension_mod_id": "bad_work", "dimension_biome": "bad_work_plains", "modsdk_piece_size": [64, 64, 64]}

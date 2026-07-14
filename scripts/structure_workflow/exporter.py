@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator
 from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
@@ -9,7 +10,7 @@ import shutil
 from typing import Any, Literal
 
 import numpy as np
-from mcstructure import Block, Structure
+from mcstructure import Block, Structure, StructurePlan
 
 from .model import ProjectSpec, Vec3
 
@@ -57,9 +58,8 @@ def _split(
     *,
     name_prefix: str,
     structure_namespace: str,
-) -> list[tuple[Placement, Structure]]:
+) -> Iterator[tuple[Placement, Structure]]:
     empty_index = _empty_palette_index(structure)
-    built: list[tuple[Placement, Structure]] = []
     size_x, size_y, size_z = structure.size
     step_x, step_y, step_z = piece_size
     for y0 in range(0, size_y, step_y):
@@ -78,22 +78,64 @@ def _split(
                 piece._palette = structure._palette.copy()
                 piece.structure = region.copy()
                 name = f"{name_prefix}_x{x0:04d}_y{y0:04d}_z{z0:04d}"
-                built.append(
-                    (
-                        Placement(
-                            name=name,
-                            offset=(x0, y0, z0),
-                            size=actual_size,
-                            structure_namespace=structure_namespace,
-                        ),
-                        piece,
-                    )
+                # Keep only the current piece resident. A 2048-wide ground plane can
+                # otherwise accumulate gigabytes of copied palette-index arrays.
+                yield (
+                    Placement(
+                        name=name,
+                        offset=(x0, y0, z0),
+                        size=actual_size,
+                        structure_namespace=structure_namespace,
+                    ),
+                    piece,
                 )
-    return built
+
+
+def _split_plan(
+    plan: StructurePlan,
+    piece_size: Vec3,
+    *,
+    name_prefix: str,
+    structure_namespace: str,
+) -> Iterator[tuple[Placement, Structure]]:
+    for offset, piece in plan.iter_pieces(piece_size):
+        x0, y0, z0 = offset
+        name = f"{name_prefix}_x{x0:04d}_y{y0:04d}_z{z0:04d}"
+        yield (
+            Placement(
+                name=name,
+                offset=offset,
+                size=piece.size,
+                structure_namespace=structure_namespace,
+            ),
+            piece,
+        )
+
+
+def _iter_export_pieces(
+    structure: Structure | StructurePlan,
+    piece_size: Vec3,
+    *,
+    name_prefix: str,
+    structure_namespace: str,
+) -> Iterator[tuple[Placement, Structure]]:
+    if isinstance(structure, StructurePlan):
+        return _split_plan(
+            structure,
+            piece_size,
+            name_prefix=name_prefix,
+            structure_namespace=structure_namespace,
+        )
+    return _split(
+        structure,
+        piece_size,
+        name_prefix=name_prefix,
+        structure_namespace=structure_namespace,
+    )
 
 
 def _write_structures(
-    output_dir: Path, built: list[tuple[Placement, Structure]]
+    output_dir: Path, built: Iterable[tuple[Placement, Structure]]
 ) -> list[Placement]:
     placements: list[Placement] = []
     for placement, structure in built:
@@ -331,7 +373,7 @@ def _teleport(spec: ProjectSpec) -> tuple[Vec3, str]:
 
 
 def export_project(
-    structure: Structure,
+    structure: Structure | StructurePlan,
     spec: ProjectSpec,
     output_dir: Path,
     *,
@@ -351,7 +393,7 @@ def export_project(
     if mode in ("all", "worldgen"):
         worldgen = _write_structures(
             output_dir,
-            _split(
+            _iter_export_pieces(
                 structure,
                 spec.worldgen_piece_size,
                 name_prefix=spec.structure_name,
@@ -362,7 +404,7 @@ def export_project(
     if mode in ("all", "modsdk"):
         modsdk = _write_structures(
             output_dir,
-            _split(
+            _iter_export_pieces(
                 structure,
                 spec.modsdk_piece_size,
                 name_prefix=spec.structure_name,

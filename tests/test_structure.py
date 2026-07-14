@@ -35,6 +35,24 @@ def test_resize_smaller() -> None:
     assert struct.get_block((0, 0, 0)) == dirt
 
 
+def test_set_blocks_uses_numpy_scalar_broadcast(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    air = Block("minecraft:air")
+    stone = Block("minecraft:stone")
+    struct = Structure((8, 4, 8), fill=air)
+
+    def unexpected_array(*args: object, **kwargs: object) -> None:
+        raise AssertionError("set_blocks must not allocate a temporary numpy array")
+
+    monkeypatch.setattr(mcstructure_module.np, "array", unexpected_array)
+    struct.set_blocks((1, 1, 2), (6, 3, 7), stone)
+
+    assert struct.get_block((1, 1, 2)) == stone
+    assert struct.get_block((6, 3, 7)) == stone
+    assert struct.get_block((0, 0, 0)) == air
+
+
 def test_combine() -> None:
     dirt = Block("minecraft:dirt")
     air = Block("minecraft:air")

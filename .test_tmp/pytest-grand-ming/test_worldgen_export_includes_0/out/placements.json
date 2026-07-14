@@ -1,0 +1,20 @@
+{
+  "worldgen": [
+    {
+      "name": "landmark_x0000_y0000_z0000",
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        16,
+        8,
+        16
+      ],
+      "structure_namespace": "biome_work_worldgen",
+      "identifier": "biome_work_worldgen:landmark_x0000_y0000_z0000"
+    }
+  ],
+  "modsdk": []
+}

@@ -120,7 +120,7 @@ workset/<work>/
 └── out/               # Generated output; do not edit or commit
 ```
 
-The builder declared in `project.json` must be a zero-argument function returning one complete `mcstructure.Structure` whose size exactly matches `structure_size`. The AI should edit only the target work's `main.py` and `src/`; the shared workflow generates `.mcstructure` pieces, features, feature rules, dimension files, the ModSDK queue, and manifests.
+The builder declared in `project.json` must be a zero-argument function returning one complete logical canvas whose size exactly matches `structure_size`. Small works use the dense `mcstructure.Structure`; scaffolds whose dense index would reach 256 MiB automatically use the low-memory `mcstructure.StructurePlan`. Both expose the same global-coordinate building interface, so AI-authored code never handles output pieces. The AI should edit only the target work's `main.py` and `src/`; the shared workflow generates `.mcstructure` pieces, features, feature rules, dimension files, the ModSDK queue, and manifests.
 
 Create a work shell:
 
@@ -144,7 +144,7 @@ python workset/my_palace/main.py
 
 The build automatically:
 
-* Splits the logical canvas into `.mcstructure` pieces of at most 65,536 blocks.
+* Splits a dense logical canvas, or renders a recorded logical canvas piece by piece, into `.mcstructure` files of at most 65,536 blocks.
 * Generates NetEase features, feature rules, custom biomes, and dimension JSON for large world-generated structures; `project.json.biome_inherits` selects the inherited vanilla biome.
 * Generates a batched ModSDK placement helper for smaller or manually triggered structures.
 * Validates in-memory JSON and dimensions plus file existence, bounds, manifest counts, and required references without immediately reopening thousands of freshly written files.

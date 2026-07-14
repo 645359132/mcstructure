@@ -121,7 +121,7 @@ workset/<work>/
 └── out/               # 自动生成，不手工修改或提交
 ```
 
-其中 `project.json` 声明的 builder 必须是一个零参数函数，并返回尺寸严格等于 `structure_size` 的完整 `mcstructure.Structure`。AI 应只修改目标 work 的 `main.py` 与 `src/`；`.mcstructure` 切片、feature、feature rule、维度文件、ModSDK 队列和输出清单统一由共享工具生成。
+其中 `project.json` 声明的 builder 必须是零参数函数，并返回尺寸严格等于 `structure_size` 的完整逻辑画布。小型工程使用密集 `mcstructure.Structure`；预计密集索引达到 256 MiB 的工程由 scaffold 自动使用低内存 `mcstructure.StructurePlan`。两者具有相同的全局坐标建造接口，AI 不需要感知 `.mcstructure` 分片。AI 应只修改目标 work 的 `main.py` 与 `src/`；切片、feature、feature rule、维度文件、ModSDK 队列和输出清单统一由共享工具生成。
 
 创建一个新 work：
 
@@ -145,7 +145,7 @@ python workset/my_palace/main.py
 
 构建命令会自动完成：
 
-* 将完整逻辑画布切成体积不超过 65,536 方块的 `.mcstructure`。
+* 将密集逻辑画布切片，或把记录式逻辑画布逐片渲染成体积不超过 65,536 方块的 `.mcstructure`。
 * 生成大型建筑所需的 `netease_features`、`netease_feature_rules`、`netease_biomes` 和自定义维度 JSON；继承的原版群系由 `project.json` 中的 `biome_inherits` 指定。
 * 生成适合小型建筑或手动触发的 ModSDK 分批放置脚本。
 * 构建时检查内存中的 JSON/尺寸、文件存在性、边界、清单计数和必要引用，不立即重开数千个刚写出的文件。

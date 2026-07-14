@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "project_name": "New Work",
+  "namespace": "new_work",
+  "structure_name": "landmark",
+  "builder": "new_work_project:build_structure",
+  "structure_size": [
+    64,
+    32,
+    64
+  ],
+  "world_origin": [
+    1024,
+    64,
+    1024
+  ],
+  "dimension_id": 700000001,
+  "dimension_mod_id": "new_work",
+  "dimension_biome": "new_work_plains",
+  "biome_inherits": "plains",
+  "repeat_period": 4096,
+  "worldgen_piece_size": [
+    16,
+    256,
+    16
+  ],
+  "modsdk_piece_size": [
+    32,
+    64,
+    32
+  ],
+  "modsdk_batch_size": 4,
+  "modsdk_batch_delay": 0.25,
+  "modsdk_passes": 3,
+  "modsdk_pass_delay": 2.0
+}

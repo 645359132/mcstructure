@@ -1,0 +1,20 @@
+{
+  "format_version": "1.14.0",
+  "netease:dimension_info": {
+    "components": {
+      "netease:biome_source": [
+        {
+          "pool": [
+            {
+              "biome_type": "recorded_export_plains",
+              "weight": 1
+            }
+          ],
+          "type": "random_with_weight"
+        }
+      ],
+      "netease:dimension_type": "minecraft:overworld",
+      "netease:generator_noise": {}
+    }
+  }
+}

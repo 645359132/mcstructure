@@ -1,0 +1,26 @@
+{
+  "project": "Recorded Export",
+  "namespace": "recorded_export",
+  "structure_size": [
+    32,
+    8,
+    32
+  ],
+  "world_origin": [
+    1024,
+    64,
+    1024
+  ],
+  "dimension_id": 700000005,
+  "dimension_biome": "recorded_export_plains",
+  "biome_inherits": "plains",
+  "repeat_period": 4096,
+  "recommended_teleport": [
+    1040,
+    74,
+    1012
+  ],
+  "teleport_command": "/tp @s 1040 74 1012 0 15",
+  "worldgen_pieces": 4,
+  "modsdk_pieces": 0
+}

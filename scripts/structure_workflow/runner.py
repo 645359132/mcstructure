@@ -10,14 +10,15 @@ from pathlib import Path
 import sys
 from typing import Callable
 
-from mcstructure import Structure
+from mcstructure import Structure, StructurePlan
 from mcstructure._fast_nbt import read_structure_size
 
 from .exporter import ExportMode, ExportReport, export_project
 from .model import ProjectSpec
 
 
-Builder = Callable[[], Structure]
+BuildArtifact = Structure | StructurePlan
+Builder = Callable[[], BuildArtifact]
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,12 +64,13 @@ def load_builder(work_dir: Path, spec: ProjectSpec) -> Builder:
     return builder
 
 
-def build_structure(work_dir: Path, spec: ProjectSpec) -> Structure:
+def build_structure(work_dir: Path, spec: ProjectSpec) -> BuildArtifact:
     builder = load_builder(work_dir, spec)
     structure = builder()
-    if not isinstance(structure, Structure):
+    if not isinstance(structure, (Structure, StructurePlan)):
         raise TypeError(
-            f"{spec.builder} returned {type(structure).__name__}, expected Structure"
+            f"{spec.builder} returned {type(structure).__name__}, expected Structure "
+            "or StructurePlan"
         )
     if structure.size != spec.structure_size:
         raise ValueError(

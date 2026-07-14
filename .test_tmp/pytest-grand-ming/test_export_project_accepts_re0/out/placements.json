@@ -1,0 +1,65 @@
+{
+  "worldgen": [
+    {
+      "name": "landmark_x0000_y0000_z0000",
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        16,
+        8,
+        16
+      ],
+      "structure_namespace": "recorded_export_worldgen",
+      "identifier": "recorded_export_worldgen:landmark_x0000_y0000_z0000"
+    },
+    {
+      "name": "landmark_x0016_y0000_z0000",
+      "offset": [
+        16,
+        0,
+        0
+      ],
+      "size": [
+        16,
+        8,
+        16
+      ],
+      "structure_namespace": "recorded_export_worldgen",
+      "identifier": "recorded_export_worldgen:landmark_x0016_y0000_z0000"
+    },
+    {
+      "name": "landmark_x0000_y0000_z0016",
+      "offset": [
+        0,
+        0,
+        16
+      ],
+      "size": [
+        16,
+        8,
+        16
+      ],
+      "structure_namespace": "recorded_export_worldgen",
+      "identifier": "recorded_export_worldgen:landmark_x0000_y0000_z0016"
+    },
+    {
+      "name": "landmark_x0016_y0000_z0016",
+      "offset": [
+        16,
+        0,
+        16
+      ],
+      "size": [
+        16,
+        8,
+        16
+      ],
+      "structure_namespace": "recorded_export_worldgen",
+      "identifier": "recorded_export_worldgen:landmark_x0016_y0000_z0016"
+    }
+  ],
+  "modsdk": []
+}

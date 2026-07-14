@@ -765,7 +765,7 @@ class Structure:
         self,
         from_coordinate: Coordinate,
         to_coordinate: Coordinate,
-        block: Block,
+        block: Block | None,
     ) -> Self:
         """
         Fills an area in the structure with blocks.
@@ -790,16 +790,9 @@ class Structure:
         tx, ty, tz = to_coordinate
 
         ident = self._add_block_to_palette(block)
-        self.structure[fx : tx + 1, fy : ty + 1, fz : tz + 1] = np.array(
-            [
-                [
-                    [ident for k in range(abs(fz - tz) + 1)]
-                    for j in range(abs(fy - ty) + 1)
-                ]
-                for i in range(abs(fx - tx) + 1)
-            ],
-            dtype=np.intc,
-        ).reshape([abs(i) + 1 for i in (fx - tx, fy - ty, fz - tz)])
+        # NumPy broadcasts the palette index across the slice without allocating a
+        # second array proportional to the filled volume.
+        self.structure[fx : tx + 1, fy : ty + 1, fz : tz + 1] = ident
         return self
 
     def resize(
@@ -908,3 +901,6 @@ class Structure:
         combined.structure[ox:, oy:, oz:] = remapped_structure[:, :, :]
 
         return combined
+
+
+from .plan import BlockCanvas, FillOperation, StructurePlan  # noqa: E402

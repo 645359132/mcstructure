@@ -1,0 +1,23 @@
+{
+  "format_version": "1.14.0",
+  "minecraft:biome": {
+    "description": {
+      "identifier": "recorded_export_plains",
+      "inherits": "plains"
+    },
+    "components": {
+      "minecraft:overworld_generation_rules": {
+        "hills_transformation": "recorded_export_plains",
+        "mutate_transformation": "recorded_export_plains",
+        "generate_for_climates": [
+          [
+            "medium",
+            0
+          ]
+        ]
+      },
+      "dm700000005": {},
+      "recorded_export_plains": {}
+    }
+  }
+}

@@ -167,5 +167,6 @@ cython_debug/
 #.idea/
 workset/illager_manor
 workset/chinese_capital
+workset/grand_ming_metropolis
 workset/example_work/out/
 knowledge/reference/

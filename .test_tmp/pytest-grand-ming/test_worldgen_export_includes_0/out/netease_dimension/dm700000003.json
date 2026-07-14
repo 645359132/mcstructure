@@ -1,0 +1,20 @@
+{
+  "format_version": "1.14.0",
+  "netease:dimension_info": {
+    "components": {
+      "netease:biome_source": [
+        {
+          "pool": [
+            {
+              "biome_type": "dm700000003_roofed_forest",
+              "weight": 1
+            }
+          ],
+          "type": "random_with_weight"
+        }
+      ],
+      "netease:dimension_type": "minecraft:overworld",
+      "netease:generator_noise": {}
+    }
+  }
+}

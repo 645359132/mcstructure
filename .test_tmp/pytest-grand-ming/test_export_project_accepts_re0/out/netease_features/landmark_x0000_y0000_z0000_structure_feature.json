@@ -1,0 +1,10 @@
+{
+  "format_version": "1.14.0",
+  "netease:structure_feature": {
+    "description": {
+      "identifier": "recorded_export:landmark_x0000_y0000_z0000_structure_feature"
+    },
+    "places_structure": "recorded_export_worldgen:landmark_x0000_y0000_z0000",
+    "rotation": 0
+  }
+}

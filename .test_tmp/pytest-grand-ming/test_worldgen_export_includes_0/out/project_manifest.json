@@ -1,0 +1,26 @@
+{
+  "project": "Biome Work",
+  "namespace": "biome_work",
+  "structure_size": [
+    16,
+    8,
+    16
+  ],
+  "world_origin": [
+    1024,
+    64,
+    1024
+  ],
+  "dimension_id": 700000003,
+  "dimension_biome": "dm700000003_roofed_forest",
+  "biome_inherits": "roofed_forest",
+  "repeat_period": 4096,
+  "recommended_teleport": [
+    1032,
+    74,
+    1012
+  ],
+  "teleport_command": "/tp @s 1032 74 1012 0 15",
+  "worldgen_pieces": 1,
+  "modsdk_pieces": 0
+}

@@ -1,0 +1,35 @@
+{
+  "format_version": "1.14.0",
+  "minecraft:feature_rules": {
+    "description": {
+      "identifier": "biome_work:landmark_x0000_y0000_z0000_feature_rule",
+      "places_feature": "biome_work:landmark_x0000_y0000_z0000_structure_feature"
+    },
+    "conditions": {
+      "placement_pass": "first_pass",
+      "minecraft:biome_filter": [
+        {
+          "all_of": [
+            {
+              "any_of": [
+                {
+                  "test": "has_biome_tag",
+                  "operator": "==",
+                  "value": "dm700000003_roofed_forest"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "distribution": {
+      "iterations": "math.mod(variable.originx-1024,4096)==0 && math.mod(variable.originz-1024,4096)==0?1:0",
+      "coordinate_eval_order": "yxz",
+      "scatter_chance": 100.0,
+      "x": 0,
+      "y": 64,
+      "z": 0
+    }
+  }
+}
