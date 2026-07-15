@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+import threading
+import time
 
 import pytest
 
@@ -223,3 +225,43 @@ def test_worldgen_export_includes_valid_custom_biome(
 
     monkeypatch.setattr(workflow_runner, "read_structure_size", unexpected_header_read)
     assert validate_output(tmp_path, spec, deep=False) > 0
+
+
+def test_deep_validation_reads_generated_files_concurrently(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = ProjectSpec(
+        schema_version=1,
+        project_name="Parallel Validation",
+        namespace="parallel_validation",
+        structure_name="landmark",
+        builder="parallel_validation:build_structure",
+        structure_size=(32, 8, 32),
+        world_origin=(1024, 64, 1024),
+        dimension_id=700_000_007,
+        dimension_mod_id="parallel_validation",
+        dimension_biome="parallel_validation_plains",
+    )
+    structure = Structure(spec.structure_size, Block("minecraft:stone"))
+    export_project(structure, spec, tmp_path / "out", mode="worldgen")
+    real_load_json = workflow_runner._load_json
+    lock = threading.Lock()
+    active = 0
+    max_active = 0
+
+    def tracked_load_json(path: Path) -> object:
+        nonlocal active, max_active
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+        try:
+            time.sleep(0.01)
+            return real_load_json(path)
+        finally:
+            with lock:
+                active -= 1
+
+    monkeypatch.setattr(workflow_runner, "_load_json", tracked_load_json)
+
+    assert validate_output(tmp_path, spec, workers=4) > 0
+    assert max_active >= 2

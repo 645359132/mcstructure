@@ -156,7 +156,7 @@ python workset/my_palace/main.py
 python scripts/structure_work.py validate workset/my_palace
 ```
 
-独立 `validate` 会重新解析全部 JSON 并读取每个结构的 NBT 头，但仍不会完整解码每片数万个方块索引。完整 NBT 编解码由小型 round-trip 测试覆盖。
+独立 `validate` 会以最多 16 个受限并发 worker 重新解析全部 JSON 并读取每个结构的 NBT 头，但仍不会完整解码每片数万个方块索引。可用 `--workers N` 调整并发；日常快速迭代可运行 `python scripts/structure_work.py validate workset/my_palace --fast`，只检查清单、计数、引用和文件库存。发布前仍应执行默认深度校验。完整 NBT 编解码由小型 round-trip 测试覆盖。
 
 可运行的最小基准位于 [`workset/example_work`](workset/example_work/README.md)。建议先构建该示例，以区分共享工具链问题与新建筑源码问题。
 

@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
+from collections.abc import Iterable
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 import importlib
+from itertools import islice
 import json
+import os
 from pathlib import Path
 import sys
-from typing import Callable
+from typing import Callable, TypeVar
 
 from mcstructure import Structure, StructurePlan
 from mcstructure._fast_nbt import read_structure_size
@@ -19,6 +24,7 @@ from .model import ProjectSpec
 
 BuildArtifact = Structure | StructurePlan
 Builder = Callable[[], BuildArtifact]
+T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +32,47 @@ class BuildResult:
     spec: ProjectSpec
     report: ExportReport
     validated_files: int
+
+
+@dataclass(frozen=True, slots=True)
+class _StructureCheck:
+    path: Path
+    expected_size: tuple[int, int, int]
+    identifier: str
+
+
+def _validation_worker_count(workers: int | None) -> int:
+    if workers is not None:
+        if workers <= 0:
+            raise ValueError("validation workers must be positive")
+        return workers
+    return min(16, max(4, os.cpu_count() or 1))
+
+
+def _run_parallel(
+    items: Iterable[T], function: Callable[[T], object], *, workers: int
+) -> None:
+    """Run I/O checks with bounded pending futures to keep validation memory low."""
+    iterator = iter(items)
+    if workers == 1:
+        for item in iterator:
+            function(item)
+        return
+    with ThreadPoolExecutor(
+        max_workers=workers, thread_name_prefix="structure-validation"
+    ) as executor:
+        pending: set[Future[object]] = {
+            executor.submit(function, item)
+            for item in islice(iterator, workers * 2)
+        }
+        while pending:
+            done, pending = wait(pending, return_when=FIRST_COMPLETED)
+            for future in done:
+                future.result()
+            pending.update(
+                executor.submit(function, item)
+                for item in islice(iterator, len(done))
+            )
 
 
 def _repository_root(work_dir: Path) -> Path:
@@ -86,8 +133,34 @@ def _load_json(path: Path) -> object:
         raise ValueError(f"invalid generated JSON {path}: {error}") from error
 
 
-def validate_output(work_dir: Path, spec: ProjectSpec, *, deep: bool = True) -> int:
+def _validate_json_file(path: Path) -> None:
+    _load_json(path)
+
+
+def _validate_structure_file(check: _StructureCheck) -> None:
+    try:
+        with check.path.open("rb") as file:
+            actual_size = read_structure_size(file)
+    except (OSError, ValueError) as error:
+        raise ValueError(
+            f"invalid generated structure {check.identifier} at {check.path}: {error}"
+        ) from error
+    if actual_size != check.expected_size:
+        raise ValueError(
+            f"piece {check.identifier} has size {actual_size}, "
+            f"manifest says {check.expected_size}"
+        )
+
+
+def validate_output(
+    work_dir: Path,
+    spec: ProjectSpec,
+    *,
+    deep: bool = True,
+    workers: int | None = None,
+) -> int:
     """Audit generated output, optionally reopening every file for deep checks."""
+    worker_count = _validation_worker_count(workers)
     output_dir = work_dir / "out"
     manifest_path = output_dir / "project_manifest.json"
     placements_path = output_dir / "placements.json"
@@ -95,15 +168,16 @@ def validate_output(work_dir: Path, spec: ProjectSpec, *, deep: bool = True) -> 
         raise ValueError("output is incomplete; run the build command first")
 
     json_paths = sorted(output_dir.rglob("*.json"))
-    if deep:
-        for path in json_paths:
-            _load_json(path)
+    json_path_set = set(json_paths)
+    json_parent_counts = Counter(path.parent for path in json_paths)
     manifest = _load_json(manifest_path)
     placements_root = _load_json(placements_path)
     if not isinstance(manifest, dict) or not isinstance(placements_root, dict):
         raise ValueError("generated manifests must contain JSON objects")
 
     validated_structures = 0
+    structure_checks: list[_StructureCheck] = []
+    expected_structure_paths: set[Path] = set()
     for mode in ("worldgen", "modsdk"):
         placements = placements_root.get(mode)
         if not isinstance(placements, list):
@@ -135,36 +209,54 @@ def validate_output(work_dir: Path, spec: ProjectSpec, *, deep: bool = True) -> 
             if size[0] * size[1] * size[2] > 65_536:
                 raise ValueError(f"piece exceeds 65,536 blocks: {identifier}")
             path = output_dir / "structures" / str(namespace) / f"{name}.mcstructure"
-            if not path.is_file():
-                raise ValueError(f"missing structure file: {path}")
+            expected_structure_paths.add(path)
             if deep:
-                with path.open("rb") as file:
-                    actual_size = read_structure_size(file)
-                if actual_size != size:
-                    raise ValueError(
-                        f"piece {identifier} has size {actual_size}, "
-                        f"manifest says {size}"
-                    )
+                structure_checks.append(_StructureCheck(path, size, identifier))
             validated_structures += 1
 
         expected_count = manifest.get(f"{mode}_pieces")
         if expected_count != len(placements):
             raise ValueError(f"{mode} piece count differs between generated manifests")
 
+    structure_root = output_dir / "structures"
+    actual_structure_paths = (
+        set(structure_root.rglob("*.mcstructure"))
+        if structure_root.is_dir()
+        else set()
+    )
+    missing_structures = sorted(
+        expected_structure_paths - actual_structure_paths, key=str
+    )
+    if missing_structures:
+        raise ValueError(f"missing structure file: {missing_structures[0]}")
+
+    if deep:
+        already_loaded = {manifest_path, placements_path}
+        _run_parallel(
+            (path for path in json_paths if path not in already_loaded),
+            _validate_json_file,
+            workers=worker_count,
+        )
+        _run_parallel(
+            structure_checks,
+            _validate_structure_file,
+            workers=worker_count,
+        )
+
     worldgen = placements_root["worldgen"]
     if worldgen:
-        if len(list((output_dir / "netease_features").glob("*.json"))) != len(worldgen):
+        features_dir = output_dir / "netease_features"
+        rules_dir = output_dir / "netease_feature_rules"
+        if json_parent_counts[features_dir] != len(worldgen):
             raise ValueError("worldgen feature count does not match placement count")
-        if len(list((output_dir / "netease_feature_rules").glob("*.json"))) != len(
-            worldgen
-        ):
+        if json_parent_counts[rules_dir] != len(worldgen):
             raise ValueError(
                 "worldgen feature-rule count does not match placement count"
             )
         expected_dimension = (
             output_dir / "netease_dimension" / f"dm{spec.dimension_id}.json"
         )
-        if not expected_dimension.is_file():
+        if expected_dimension not in json_path_set:
             raise ValueError(f"missing dimension definition: {expected_dimension}")
         dimension_root = _load_json(expected_dimension)
         dimension_info = (
@@ -200,7 +292,7 @@ def validate_output(work_dir: Path, spec: ProjectSpec, *, deep: bool = True) -> 
             / spec.dimension_biome_namespace
             / f"{spec.dimension_biome}.json"
         )
-        if not expected_biome.is_file():
+        if expected_biome not in json_path_set:
             raise ValueError(f"missing biome definition: {expected_biome}")
         biome_root = _load_json(expected_biome)
         biome = (
@@ -233,11 +325,13 @@ def build_work(work_dir: Path, *, mode: ExportMode = "all") -> BuildResult:
     return BuildResult(spec, report, validated_files)
 
 
-def validate_work(work_dir: Path) -> int:
+def validate_work(
+    work_dir: Path, *, deep: bool = True, workers: int | None = None
+) -> int:
     work_dir = work_dir.resolve()
     spec = ProjectSpec.load(work_dir)
     build_structure(work_dir, spec)
-    return validate_output(work_dir, spec)
+    return validate_output(work_dir, spec, deep=deep, workers=workers)
 
 
 def print_result(result: BuildResult) -> None:

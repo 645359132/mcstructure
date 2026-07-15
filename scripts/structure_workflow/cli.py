@@ -40,6 +40,22 @@ def main() -> int:
         "validate", help="audit source and existing output"
     )
     validate.add_argument("work_dir", type=Path)
+    validate.add_argument(
+        "--fast",
+        action="store_true",
+        help=(
+            "validate manifests, counts, references, and file inventory without "
+            "reopening every generated file"
+        ),
+    )
+    validate.add_argument(
+        "--workers",
+        type=int,
+        help=(
+            "parallel workers for deep JSON and structure-header validation "
+            "(default: up to 16)"
+        ),
+    )
 
     args = parser.parse_args()
     if args.command == "new":
@@ -63,6 +79,8 @@ def main() -> int:
     if args.command == "build":
         print_result(build_work(args.work_dir, mode=args.mode))
         return 0
-    validated = validate_work(args.work_dir)
+    validated = validate_work(
+        args.work_dir, deep=not args.fast, workers=args.workers
+    )
     print(f"Validated {validated} generated files in {args.work_dir.resolve() / 'out'}")
     return 0

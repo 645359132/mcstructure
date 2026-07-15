@@ -155,7 +155,7 @@ Audit an existing output without rewriting it:
 python scripts/structure_work.py validate workset/my_palace
 ```
 
-Standalone `validate` reparses every JSON file and reads each structure's NBT header, but still avoids decoding every block index in every piece. Small round-trip tests cover complete NBT encoding and decoding.
+Deep validation uses up to 16 bounded I/O workers to parse every JSON file and read every structure header without decoding every block index; use `--workers N` to tune concurrency. During iteration, `python scripts/structure_work.py validate workset/my_palace --fast` checks manifests, counts, references, and the file inventory without reopening every generated file. Run the default deep validation before release. Small round-trip tests cover complete NBT encoding and decoding.
 
 The runnable [`workset/example_work`](workset/example_work/README.md) project is the minimal reference implementation. Build it first when you need to distinguish a shared-tooling problem from a new generator problem.
 

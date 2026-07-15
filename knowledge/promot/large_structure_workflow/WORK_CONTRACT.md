@@ -81,4 +81,4 @@ def build_structure() -> Structure | StructurePlan:
 - `place_with_modsdk.py`
 - `placements.json` 与 `project_manifest.json`
 
-`build` 根据刚生成的内存数据校验规格、builder、尺寸、切片边界/体积、文件存在性、清单计数和引用，不立即重开数千个新文件。独立 `validate` 还会重新解析所有 JSON 并读取每片结构的固定 NBT 头，但不完整解码方块数组；完整 NBT 编解码正确性由小型 round-trip 测试覆盖。
+`build` 根据刚生成的内存数据校验规格、builder、尺寸、切片边界/体积、文件库存、清单计数和引用，不立即重开数千个新文件。独立 `validate` 默认使用最多 16 个受限并发 worker，重新解析所有 JSON 并读取每片结构的固定 NBT 头，但不完整解码方块数组；可用 `--workers N` 调整并发。日常迭代可用 `validate ... --fast`，只校验清单、计数、引用和一次性文件库存；发布前仍应执行默认深度校验。完整 NBT 编解码正确性由小型 round-trip 测试覆盖。
